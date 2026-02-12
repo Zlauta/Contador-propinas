@@ -1,17 +1,10 @@
-import { Schema, model } from "mongoose";
+import { Schema, model } from 'mongoose';
 
-const usuarioSchema = new Schema(
-  {
-    nombre: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    contrasenia: { type: String, required: true },
-    rol : { type: String, enum: ["admin", "mozo"], default: "mozo" },
-    propinas: [{ type: Schema.Types.ObjectId, ref: "Propina" }],
+const UsuarioSchema = new Schema({
+  nombre: { type: String, required: [true, 'El nombre es obligatorio'], trim: true },
+  email: { type: String, required: [true, 'El email es obligatorio'], unique: true, trim: true },
+  clave: { type: String, required: [true, 'La contraseña es obligatoria'] },
+  rol: { type: String, enum: ['admin', 'mozo'], default: 'mozo' },
+}, { timestamps: true });
 
-  },
-  {
-    timestamps: true,
-  },
-);
-
-export const Usuario = model("Usuario", usuarioSchema);
+export default model('Usuario', UsuarioSchema);
