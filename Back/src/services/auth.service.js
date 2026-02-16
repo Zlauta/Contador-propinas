@@ -1,7 +1,7 @@
 import Usuario from "../model/Usuario.js";
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
-import AppError from "../utils/appError.js";
+import AppError from "../utils/AppError.js";
 
 export const registrarUsuario = async (datos) => {
   const { nombre, email, clave, rol } = datos;
@@ -45,4 +45,22 @@ export const loginUsuario = async (email, clave) => {
 
 export const obtenerMozos = async () => {
   return await Usuario.find({ rol: "mozo" }).select("nombre _id email");
+};
+
+export const eliminarUsuario = async (id) => {
+  const usuario = await Usuario.findByIdAndDelete(id);
+  if (!usuario) throw new AppError('Usuario no encontrado', 404);
+  return usuario;
+};
+
+// NUEVO: Actualizar Usuario (ej: cambiar nombre o rol)
+export const actualizarUsuario = async (id, datos) => {
+  // Evitar que actualicen la contraseña por aquí (eso requiere hash)
+  if (datos.clave) {
+     delete datos.clave; 
+  }
+  
+  const usuario = await Usuario.findByIdAndUpdate(id, datos, { new: true });
+  if (!usuario) throw new AppError('Usuario no encontrado', 404);
+  return usuario;
 };
