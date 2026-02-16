@@ -1,4 +1,4 @@
-import { registrarUsuario, loginUsuario, obtenerMozos as listarMozosService } from '../services/auth.service.js';
+import { registrarUsuario, loginUsuario, obtenerMozos as listarMozosService, eliminarUsuario, actualizarUsuario } from '../services/auth.service.js';
 import catchAsync from '../utils/catchAsync.js';
 
 export const registrar = catchAsync(async (req, res, next) => {
@@ -27,4 +27,14 @@ export const obtenerMozos = catchAsync(async (req, res, next) => {
     results: mozos.length,
     data: mozos
   });
+});
+
+export const actualizarUser = catchAsync(async (req, res, next) => {
+  const usuario = await actualizarUsuario(req.params.id, req.body);
+  res.status(200).json({ estado: 'success', data: usuario });
+});
+
+export const eliminarUser = catchAsync(async (req, res, next) => {
+  await eliminarUsuario(req.params.id);
+  res.status(204).json({ estado: 'success', data: null });
 });
