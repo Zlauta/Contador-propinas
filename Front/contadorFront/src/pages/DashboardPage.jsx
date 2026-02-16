@@ -1,0 +1,325 @@
+import { useEffect, useState } from "react";
+import Navbar from "../components/Navbar";
+import { useForm } from "react-hook-form";
+import toast from "react-hot-toast";
+import {
+  FaMoneyBillWave,
+  FaHistory,
+  FaTrash,
+  FaEdit,
+  FaUsers,
+  FaUserCog,
+} from "react-icons/fa";
+import { useAuth } from "../context/AuthContext";
+import ModalEditarPropina from "../components/ModalEditarPropina";
+
+// Servicios
+import {
+  obtenerMozosPeticion,
+  eliminarUsuarioPeticion,
+  actualizarUsuarioPeticion,
+} from "../services/auth.service";
+import {
+  crearPropinaPeticion,
+  obtenerTotalesPeticion,
+  obtenerHistorialPeticion,
+  eliminarPropinaPeticion,
+  actualizarPropinaPeticion,
+} from "../services/propina.service";
+
+function DashboardPage() {
+  const [mozos, setMozos] = useState([]);
+  const [totales, setTotales] = useState([]);
+  const [historial, setHistorial] = useState([]);
+
+  // Estado para el Modal de Edición de Propina
+  const [modalOpen, setModalOpen] = useState(false);
+  const [propinaSeleccionada, setPropinaSeleccionada] = useState(null);
+
+  const { register, handleSubmit, reset } = useForm();
+  const { usuario } = useAuth();
+
+  // --- CARGA DE DATOS ---
+  const cargarDatos = async () => {
+    try {
+      const [resMozos, resTotales, resHistorial] = await Promise.all([
+        obtenerMozosPeticion(),
+        obtenerTotalesPeticion(),
+        obtenerHistorialPeticion(),
+      ]);
+      setMozos(resMozos.data.data);
+      setTotales(resTotales.data.data);
+      setHistorial(resHistorial.data.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  // --- TOAST DE CONFIRMACIÓN (Reutilizable) ---
+  const confirmarAccion = (mensaje, accionConfirmada) => {
+    toast.custom((t) => (
+      <div
+        className={`${t.visible ? "animate-enter" : "animate-leave"} max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 p-4`}
+      >
+        <div className="flex-1 w-0 p-1">
+          <div className="flex items-start">
+            <div className="ml-3 flex-1">
+              <p className="text-sm font-medium text-gray-900">{mensaje}</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex border-l border-gray-200 ml-4">
+          <button
+            onClick={() => {
+              accionConfirmada();
+              toast.dismiss(t.id);
+            }}
+            className="w-full border border-transparent rounded-none rounded-r-lg p-2 flex items-center justify-center text-sm font-bold text-red-600 hover:bg-red-50"
+          >
+            Sí, borrar
+          </button>
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="w-full border border-transparent rounded-none p-2 flex items-center justify-center text-sm font-medium text-gray-600 hover:bg-gray-50"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    ));
+  };
+
+  // --- HANDLERS PROPINA ---
+  const onSubmitPropina = async (data) => {
+    try {
+      await crearPropinaPeticion({
+        idMozo: data.idMozo,
+        monto: Number(data.monto),
+      });
+      toast.success("Propina registrada");
+      reset();
+      cargarDatos();
+    } catch (error) {
+      toast.error("Error al registrar");
+    }
+  };
+
+  const borrarPropina = (id) => {
+    confirmarAccion("¿Eliminar esta propina permanentemente?", async () => {
+      try {
+        await eliminarPropinaPeticion(id);
+        toast.success("Eliminado");
+        cargarDatos();
+      } catch (e) {
+        toast.error("Error al eliminar");
+      }
+    });
+  };
+
+  const editarPropina = async (id, nuevosDatos) => {
+    try {
+      await actualizarPropinaPeticion(id, nuevosDatos);
+      toast.success("Monto actualizado");
+      cargarDatos();
+    } catch (e) {
+      toast.error("Error al actualizar");
+    }
+  };
+
+  // --- HANDLERS USUARIOS (Mozos) ---
+  const borrarUsuario = (id) => {
+    confirmarAccion("¿Borrar este usuario y todo su historial?", async () => {
+      try {
+        await eliminarUsuarioPeticion(id);
+        toast.success("Usuario eliminado");
+        cargarDatos();
+      } catch (e) {
+        toast.error("No se pudo eliminar el usuario");
+      }
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-10">
+      <Navbar />
+      <div className="max-w-6xl mx-auto p-6 space-y-8">
+        {/* 1. CARGA PROPINA */}
+        <div className="bg-white p-6 rounded-xl shadow-md border-t-4 border-brand-500">
+          <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <FaMoneyBillWave className="text-brand-600" /> Cargar Propina
+          </h2>
+          <form
+            onSubmit={handleSubmit(onSubmitPropina)}
+            className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"
+          >
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mozo
+              </label>
+              <select
+                {...register("idMozo", { required: true })}
+                className="w-full border rounded-lg p-2 bg-gray-50"
+              >
+                <option value="">-- Elegir --</option>
+                {mozos.map((m) => (
+                  <option key={m._id} value={m._id}>
+                    {m.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Monto ($)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                {...register("monto", { required: true, min: 0 })}
+                className="w-full border rounded-lg p-2 bg-gray-50"
+                placeholder="0.00"
+              />
+            </div>
+            <button
+              type="submit"
+              className="bg-brand-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-brand-700 transition shadow-md"
+            >
+              Registrar
+            </button>
+          </form>
+        </div>
+
+        {/* 2. TOTALES SEMANALES */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {totales.map((item) => (
+            <div
+              key={item._id}
+              className="bg-white p-6 rounded-xl shadow-sm border flex flex-col items-center"
+            >
+              <div className="w-12 h-12 bg-brand-50 text-brand-600 rounded-full flex items-center justify-center font-bold text-xl mb-2">
+                {item.nombreMozo?.charAt(0).toUpperCase()}
+              </div>
+              <h3 className="font-semibold">{item.nombreMozo}</h3>
+              <p className="text-2xl font-bold text-brand-700">
+                ${item.totalMonto.toFixed(2)}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* 3. HISTORIAL */}
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <FaHistory className="text-gray-500" /> Historial Semanal
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b text-gray-400 text-xs font-bold uppercase">
+                  <th className="py-2">Mozo</th>
+                  <th className="py-2">Fecha</th>
+                  <th className="py-2 text-right">Monto</th>
+                  {usuario?.rol === "admin" && (
+                    <th className="py-2 text-center">Acciones</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {historial.map((p) => (
+                  <tr
+                    key={p._id}
+                    className="hover:bg-gray-50 border-b last:border-0"
+                  >
+                    <td className="py-3 font-medium">{p.idMozo?.nombre}</td>
+                    <td className="py-3 text-sm text-gray-500">
+                      {new Date(p.fecha).toLocaleDateString()}
+                    </td>
+                    <td className="py-3 text-right font-bold text-green-600">
+                      ${p.monto}
+                    </td>
+                    {usuario?.rol === "admin" && (
+                      <td className="py-3 flex justify-center gap-2">
+                        <button
+                          onClick={() => {
+                            setPropinaSeleccionada(p);
+                            setModalOpen(true);
+                          }}
+                          className="text-blue-500 hover:text-blue-700 p-1"
+                          title="Editar"
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          onClick={() => borrarPropina(p._id)}
+                          className="text-red-400 hover:text-red-600 p-1"
+                          title="Borrar"
+                        >
+                          <FaTrash />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* 4. GESTIÓN DE USUARIOS (Solo Admin) */}
+        {usuario?.rol === "admin" && (
+          <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <FaUsers className="text-gray-500" /> Gestión de Equipo
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b text-gray-400 text-xs font-bold uppercase">
+                    <th className="py-2">Nombre</th>
+                    <th className="py-2">Email</th>
+                    <th className="py-2 text-center">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mozos.map((m) => (
+                    <tr
+                      key={m._id}
+                      className="hover:bg-gray-50 border-b last:border-0"
+                    >
+                      <td className="py-3 flex items-center gap-2">
+                        <FaUserCog className="text-gray-400" /> {m.nombre}
+                      </td>
+                      <td className="py-3 text-gray-600">{m.email}</td>
+                      <td className="py-3 text-center">
+                        <button
+                          onClick={() => borrarUsuario(m._id)}
+                          className="text-red-500 hover:text-red-700 text-sm font-medium px-3 py-1 bg-red-50 rounded hover:bg-red-100 transition"
+                        >
+                          <FaTrash></FaTrash>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* MODAL PARA EDITAR PROPINA */}
+      <ModalEditarPropina
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        propinaAEditar={propinaSeleccionada}
+        onUpdate={editarPropina}
+      />
+    </div>
+  );
+}
+
+export default DashboardPage;
