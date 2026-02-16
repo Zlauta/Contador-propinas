@@ -3,14 +3,20 @@ import cors from 'cors';
 import morgan from 'morgan';
 import rutas from './src/routes/index.routes.js';
 import { globalErrorHandler } from './src/middlewares/error.middleware.js';
-import AppError from './src/utils/appError.js';
+import AppError from './src/utils/AppError.js';
 
 const app = express();
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: [
+    process.env.FRONTEND_URL, // Para desarrollo local
+    process.env.VERCEL_URL // ⚠️ AQUÍ IRÁ TU URL DE VERCEL CUANDO LA TENGAS
+  ],
+  credentials: true // Importante para cookies/tokens
+}));
 app.use(express.json());
-if (process.env.NODE_ENV === 'development') app.use(morgan('dev'));
+if (process.env.NODE_ENV === 'production') app.use(morgan('dev'));
 
 // Rutas
 app.use('/api', rutas);

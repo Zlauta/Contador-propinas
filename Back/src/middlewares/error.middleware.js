@@ -5,6 +5,6 @@ export const globalErrorHandler = (err, req, res, next) => {
   res.status(err.statusCode).json({
     estado: err.status,
     mensaje: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    stack: process.env.NODE_ENV === 'production' ? err.stack : undefined
   });
 };
