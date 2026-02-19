@@ -19,3 +19,7 @@ export const eliminarPropinaPeticion = async (id) => {
 export const actualizarPropinaPeticion = async (id, datos) => {
   return await axios.put(`/propinas/${id}`, datos);
 };
+
+export const liquidarSemanaPeticion = async () => {
+  return await axios.post('/propinas/liquidar');
+};
