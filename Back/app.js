@@ -9,28 +9,27 @@ const app = express();
 
 // Middlewares
 // Lista blanca dinámica
-const allowedOrigins = [
-  process.env.FRONTEND_URL, // <--- Tu variable de entorno (Prod)
-  "http://localhost:5173"   // <--- Tu entorno local (Dev)
-];
+app.use((req, res, next) => {
+  // Permitir origen específico (ajusta la URL a la de tu front)
+  const allowedOrigins = ['https://bonafide-front.vercel.app', 'http://localhost:5173'];
+  const origin = req.headers.origin;
+  
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
 
-app.use(cors({
-  origin: function (origin, callback) {
-    // Permitir solicitudes sin origen (como Postman o Server-to-Server)
-    if (!origin) return callback(null, true);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log("Bloqueado por CORS:", origin); // Esto te ayuda a ver en los logs de Vercel quién intenta entrar
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true, // ¡CRÍTICO! Permite pasar cookies/tokens
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+  // Si es una petición OPTIONS (Preflight), respondemos OK y terminamos aquí
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
+  next();
+});
+// -------------------------------------------------------------
 app.use(express.json());
 if (process.env.NODE_ENV === 'production') app.use(morgan('dev'));
 
