@@ -1,5 +1,5 @@
 import Propina from '../model/Propina.js';
-import AppError from '../utils/AppError.js';
+import AppError from '../utils/appError.js';
 
 // --- UTILIDAD: Calcular rango de fechas (Semana Sábado a Sábado) ---
 const obtenerRangoSemanaActual = () => {
