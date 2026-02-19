@@ -1,4 +1,4 @@
-import { crearPropina, obtenerHistorial as obtenerHistorialService, calcularTotalesSemanales, actualizarPropina, eliminarPropina } from '../services/propina.service.js';
+import { crearPropina, obtenerHistorial as obtenerHistorialService, calcularTotalesSemanales, actualizarPropina, eliminarPropina, liquidarSemana } from '../services/propina.service.js';
 import catchAsync from '../utils/catchAsync.js';
 
 export const crear = catchAsync(async (req, res, next) => {
@@ -24,6 +24,14 @@ export const obtenerTotales = catchAsync(async (req, res, next) => {
   res.status(200).json({
     estado: 'success',
     data: totales
+  });
+});
+
+export const liquidar = catchAsync(async (req, res, next) => {
+  const resultado = await liquidarSemana();
+  res.status(200).json({
+    estado: 'success',
+    mensaje: `Se resetearon ${resultado.modifiedCount} propinas.`
   });
 });
 
