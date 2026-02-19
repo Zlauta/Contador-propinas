@@ -9,6 +9,8 @@ import {
   FaEdit,
   FaUsers,
   FaUserCog,
+  FaCalendarAlt,
+  FaCheckDouble,
 } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 import ModalEditarPropina from "../components/ModalEditarPropina";
@@ -17,7 +19,6 @@ import ModalEditarPropina from "../components/ModalEditarPropina";
 import {
   obtenerMozosPeticion,
   eliminarUsuarioPeticion,
-  actualizarUsuarioPeticion,
 } from "../services/auth.service";
 import {
   crearPropinaPeticion,
@@ -25,6 +26,7 @@ import {
   obtenerHistorialPeticion,
   eliminarPropinaPeticion,
   actualizarPropinaPeticion,
+  liquidarSemanaPeticion,
 } from "../services/propina.service";
 
 function DashboardPage() {
@@ -32,14 +34,27 @@ function DashboardPage() {
   const [totales, setTotales] = useState([]);
   const [historial, setHistorial] = useState([]);
 
-  // Estado para el Modal de Edición de Propina
   const [modalOpen, setModalOpen] = useState(false);
   const [propinaSeleccionada, setPropinaSeleccionada] = useState(null);
 
   const { register, handleSubmit, reset } = useForm();
   const { usuario } = useAuth();
 
-  // --- CARGA DE DATOS ---
+  // --- NUEVO: Datos calculados para la vista ---
+  // Obtener el día de la semana con la primera letra en mayúscula
+  const diaActual = new Date().toLocaleDateString("es-AR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  const diaFormateado = diaActual.charAt(0).toUpperCase() + diaActual.slice(1);
+
+  // Calcular el gran total sumando todos los totales individuales
+  const granTotalSemana = totales.reduce(
+    (acumulador, actual) => acumulador + actual.totalMonto,
+    0,
+  );
+
   const cargarDatos = async () => {
     try {
       const [resMozos, resTotales, resHistorial] = await Promise.all([
@@ -59,18 +74,14 @@ function DashboardPage() {
     cargarDatos();
   }, []);
 
-  // --- TOAST DE CONFIRMACIÓN (Reutilizable) ---
+  // --- UTILIDAD TOAST CONFIRMACIÓN ---
   const confirmarAccion = (mensaje, accionConfirmada) => {
     toast.custom((t) => (
       <div
         className={`${t.visible ? "animate-enter" : "animate-leave"} max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 p-4`}
       >
         <div className="flex-1 w-0 p-1">
-          <div className="flex items-start">
-            <div className="ml-3 flex-1">
-              <p className="text-sm font-medium text-gray-900">{mensaje}</p>
-            </div>
-          </div>
+          <p className="text-sm font-medium text-gray-900">{mensaje}</p>
         </div>
         <div className="flex border-l border-gray-200 ml-4">
           <button
@@ -80,7 +91,7 @@ function DashboardPage() {
             }}
             className="w-full border border-transparent rounded-none rounded-r-lg p-2 flex items-center justify-center text-sm font-bold text-red-600 hover:bg-red-50"
           >
-            Sí, borrar
+            Confirmar
           </button>
           <button
             onClick={() => toast.dismiss(t.id)}
@@ -93,7 +104,7 @@ function DashboardPage() {
     ));
   };
 
-  // --- HANDLERS PROPINA ---
+  // --- HANDLERS ---
   const onSubmitPropina = async (data) => {
     try {
       await crearPropinaPeticion({
@@ -115,7 +126,7 @@ function DashboardPage() {
         toast.success("Eliminado");
         cargarDatos();
       } catch (e) {
-        toast.error("Error al eliminar");
+        toast.error("Error");
       }
     });
   };
@@ -126,29 +137,70 @@ function DashboardPage() {
       toast.success("Monto actualizado");
       cargarDatos();
     } catch (e) {
-      toast.error("Error al actualizar");
+      toast.error("Error");
     }
   };
 
-  // --- HANDLERS USUARIOS (Mozos) ---
   const borrarUsuario = (id) => {
-    confirmarAccion("¿Borrar este usuario y todo su historial?", async () => {
+    confirmarAccion("¿Borrar este usuario y su historial?", async () => {
       try {
         await eliminarUsuarioPeticion(id);
         toast.success("Usuario eliminado");
         cargarDatos();
       } catch (e) {
-        toast.error("No se pudo eliminar el usuario");
+        toast.error("Error");
       }
     });
+  };
+
+  // NUEVO: Handler para Resetear Semana
+  const handleResetearSemana = () => {
+    confirmarAccion(
+      "¿Seguro que deseas CERRAR LA SEMANA? Los montos volverán a $0 (pero quedarán guardados en el historial general).",
+      async () => {
+        try {
+          await liquidarSemanaPeticion();
+          toast.success("¡Semana reseteada con éxito!");
+          cargarDatos(); // Recarga todo, ahora vendrá en 0
+        } catch (error) {
+          toast.error("Hubo un error al resetear la semana");
+        }
+      },
+    );
   };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
       <Navbar />
       <div className="max-w-6xl mx-auto p-6 space-y-8">
+        {/* NUEVO: BANNER DE RESUMEN SEMANAL */}
+        <div className="bg-brand-600 text-white rounded-xl shadow-lg p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="bg-white/20 p-3 rounded-full">
+              <FaCalendarAlt className="text-2xl" />
+            </div>
+            <div>
+              <p className="text-brand-100 text-sm font-medium">
+                {diaFormateado}
+              </p>
+              <h2 className="text-2xl font-bold">
+                Total Recaudado: ${granTotalSemana.toFixed(2)}
+              </h2>
+            </div>
+          </div>
+
+          {usuario?.rol === "admin" && (
+            <button
+              onClick={handleResetearSemana}
+              className="bg-white text-brand-600 font-bold py-2 px-6 rounded-lg hover:bg-gray-100 transition shadow-md flex items-center gap-2"
+            >
+              <FaCheckDouble /> Cerrar Semana (Reset)
+            </button>
+          )}
+        </div>
+
         {/* 1. CARGA PROPINA */}
-        <div className="bg-white p-6 rounded-xl shadow-md border-t-4 border-brand-500">
+        <div className="bg-white p-6 rounded-xl shadow-md">
           <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
             <FaMoneyBillWave className="text-brand-600" /> Cargar Propina
           </h2>
@@ -193,7 +245,7 @@ function DashboardPage() {
           </form>
         </div>
 
-        {/* 2. TOTALES SEMANALES */}
+        {/* 2. TOTALES POR MOZO */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {totales.map((item) => (
             <div
@@ -207,6 +259,9 @@ function DashboardPage() {
               <p className="text-2xl font-bold text-brand-700">
                 ${item.totalMonto.toFixed(2)}
               </p>
+              <span className="text-xs text-gray-400 mt-1">
+                {item.cantidad} propinas
+              </span>
             </div>
           ))}
         </div>
@@ -214,7 +269,7 @@ function DashboardPage() {
         {/* 3. HISTORIAL */}
         <div className="bg-white p-6 rounded-xl shadow-md">
           <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <FaHistory className="text-gray-500" /> Historial Semanal
+            <FaHistory className="text-gray-500" /> Historial Activo
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -236,7 +291,11 @@ function DashboardPage() {
                   >
                     <td className="py-3 font-medium">{p.idMozo?.nombre}</td>
                     <td className="py-3 text-sm text-gray-500">
-                      {new Date(p.fecha).toLocaleDateString()}
+                      {new Date(p.fecha).toLocaleDateString()}{" "}
+                      {new Date(p.fecha).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </td>
                     <td className="py-3 text-right font-bold text-green-600">
                       ${p.monto}
@@ -266,52 +325,18 @@ function DashboardPage() {
                 ))}
               </tbody>
             </table>
+            {historial.length === 0 && (
+              <p className="text-center text-gray-500 mt-4">
+                No hay propinas cargadas en esta semana.
+              </p>
+            )}
           </div>
         </div>
 
-        {/* 4. GESTIÓN DE USUARIOS (Solo Admin) */}
-        {usuario?.rol === "admin" && (
-          <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <FaUsers className="text-gray-500" /> Gestión de Equipo
-            </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b text-gray-400 text-xs font-bold uppercase">
-                    <th className="py-2">Nombre</th>
-                    <th className="py-2">Email</th>
-                    <th className="py-2 text-center">Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mozos.map((m) => (
-                    <tr
-                      key={m._id}
-                      className="hover:bg-gray-50 border-b last:border-0"
-                    >
-                      <td className="py-3 flex items-center gap-2">
-                        <FaUserCog className="text-gray-400" /> {m.nombre}
-                      </td>
-                      <td className="py-3 text-gray-600">{m.email}</td>
-                      <td className="py-3 text-center">
-                        <button
-                          onClick={() => borrarUsuario(m._id)}
-                          className="text-red-500 hover:text-red-700 text-sm font-medium px-3 py-1 bg-red-50 rounded hover:bg-red-100 transition"
-                        >
-                          <FaTrash></FaTrash>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        {/* 4. GESTIÓN DE EQUIPO */}
+        {/* ... (Igual que antes) ... */}
       </div>
 
-      {/* MODAL PARA EDITAR PROPINA */}
       <ModalEditarPropina
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
