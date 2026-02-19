@@ -12,7 +12,7 @@ const app = express();
 
 app.use(cors({
   origin: [
-    "https://bonafide-front.vercel.app", // Tu frontend exacto (sin barra al final)
+    process.env.FRONTEND_URL, // Tu frontend exacto (sin barra al final)
     "http://localhost:5173"
   ],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
