@@ -1,7 +1,7 @@
 import Usuario from "../model/Usuario.js";
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
-import AppError from "../utils/AppError.js";
+import AppError from "../utils/appError.js";
 
 export const registrarUsuario = async (datos) => {
   const { nombre, email, clave, rol } = datos;
