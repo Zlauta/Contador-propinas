@@ -127,7 +127,7 @@ function DashboardPage() {
               onClick={handleResetearSemana}
               className="bg-white text-brand-600 font-bold py-2 px-6 rounded-lg hover:bg-gray-100 transition shadow-md flex items-center gap-2"
             >
-              <FaCheckDouble /> Cerrar Semana (Reset)
+              <FaCheckDouble /> Cerrar Semana
             </button>
           )}
         </div>
