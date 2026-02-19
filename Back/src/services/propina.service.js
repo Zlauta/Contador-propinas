@@ -1,5 +1,5 @@
-import Propina from '../model/Propina.js';
-import AppError from '../utils/appError.js';
+import Propina from "../model/Propina.js";
+import AppError from "../utils/appError.js";
 
 // --- UTILIDAD: Calcular rango de fechas (Semana Sábado a Sábado) ---
 const obtenerRangoSemanaActual = () => {
@@ -26,32 +26,22 @@ const obtenerRangoSemanaActual = () => {
 // --- CRUD ---
 
 export const crearPropina = async (datos) => {
-  if (datos.monto < 0) throw new AppError('El monto no puede ser negativo', 400);
+  if (datos.monto < 0)
+    throw new AppError("El monto no puede ser negativo", 400);
   return await Propina.create(datos);
 };
 
 // Modificado: Ahora filtra por la semana actual
 export const obtenerHistorial = async () => {
-  const { inicio, fin } = obtenerRangoSemanaActual();
-  
-  return await Propina.find({
-    fecha: { $gte: inicio, $lt: fin } // Solo traer datos entre Sábado y Sábado
-  })
-    .populate('idMozo', 'nombre email')
-    .populate('creadoPor', 'nombre')
+  return await Propina.find({ liquidada: false })
+    .populate("idMozo", "nombre email")
+    .populate("creadoPor", "nombre")
     .sort({ createdAt: -1 });
 };
 
-// Modificado: Ahora calcula totales solo de esta semana
 export const calcularTotalesSemanales = async () => {
-  const { inicio, fin } = obtenerRangoSemanaActual();
-
   return await Propina.aggregate([
-    {
-      $match: {
-        fecha: { $gte: inicio, $lt: fin } // FILTRO CLAVE: Solo semana actual
-      }
-    },
+    { $match: { liquidada: false } }, // Filtro clave
     {
       $group: {
         _id: "$idMozo",
@@ -61,32 +51,38 @@ export const calcularTotalesSemanales = async () => {
     },
     {
       $lookup: {
-        from: "usuarios",
-        localField: "_id",
-        foreignField: "_id",
-        as: "infoMozo"
+        from: "usuarios", localField: "_id", foreignField: "_id", as: "infoMozo"
       }
     },
     {
       $project: {
         nombreMozo: { $arrayElemAt: ["$infoMozo.nombre", 0] },
-        totalMonto: 1,
-        cantidad: 1
+        totalMonto: 1, cantidad: 1
       }
     }
   ]);
 };
 
+// NUEVO: Función para resetear la semana
+export const liquidarSemana = async () => {
+  // Pasa todas las propinas activas a liquidada: true
+  const resultado = await Propina.updateMany({ liquidada: false }, { liquidada: true });
+  return resultado;
+};
+
 // NUEVO: Eliminar Propina
 export const eliminarPropina = async (id) => {
   const propina = await Propina.findByIdAndDelete(id);
-  if (!propina) throw new AppError('No se encontró la propina con ese ID', 404);
+  if (!propina) throw new AppError("No se encontró la propina con ese ID", 404);
   return propina;
 };
 
 // NUEVO: Actualizar Propina
 export const actualizarPropina = async (id, datos) => {
-  const propina = await Propina.findByIdAndUpdate(id, datos, { new: true, runValidators: true });
-  if (!propina) throw new AppError('No se encontró la propina', 404);
+  const propina = await Propina.findByIdAndUpdate(id, datos, {
+    new: true,
+    runValidators: true,
+  });
+  if (!propina) throw new AppError("No se encontró la propina", 404);
   return propina;
 };

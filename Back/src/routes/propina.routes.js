@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { actualizar, crear, eliminar, obtenerHistorial, obtenerTotales } from '../controllers/propina.controller.js';
+import { actualizar, crear, eliminar, liquidar, obtenerHistorial, obtenerTotales } from '../controllers/propina.controller.js';
 import { protegerRuta, restringirA } from '../middlewares/auth.middleware.js';
 
 const router = Router();
@@ -12,5 +12,6 @@ router.get('/totales', obtenerTotales);
 router.post('/', restringirA('admin'), crear);
 router.delete('/:id', restringirA('admin'), eliminar); // NUEVA
 router.put('/:id', restringirA('admin'), actualizar);  // NUEVA
+router.post('/liquidar', restringirA('admin'), liquidar);
 
 export default router;
