@@ -4,23 +4,27 @@ import morgan from 'morgan';
 import rutas from './src/routes/index.routes.js';
 import { globalErrorHandler } from './src/middlewares/error.middleware.js';
 import AppError from './src/utils/appError.js';
-import {conectarDB} from './src/config/db.js';
+import conectarDB from './src/config/db.js';
 
 const app = express();
 
-conectarDB();
+
 
 app.use(cors({
   origin: [
-    process.env.FRONTEND_URL, // Tu frontend exacto (sin barra al final)
+    "https://bonafide-front.vercel.app", // Tu frontend exacto (sin barra al final)
     "http://localhost:5173"
   ],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   credentials: true
 }));
 
+app.options('*', cors());
+
 app.use(express.json());
 if (process.env.NODE_ENV === 'production') app.use(morgan('dev'));
+
+conectarDB();
 
 // Rutas
 app.use('/api', rutas);
