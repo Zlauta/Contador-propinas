@@ -39,7 +39,7 @@ function DashboardPage() {
   const [propinaSeleccionada, setPropinaSeleccionada] = useState(null);
 
   const { register, handleSubmit, reset } = useForm();
-  const { usuario } = useAuth();
+  const { usuario, cargando } = useAuth();
 
   // --- DATOS CALCULADOS PARA LA VISTA ---
   const diaActual = new Date().toLocaleDateString("es-AR", {
@@ -65,12 +65,20 @@ function DashboardPage() {
       setHistorial(resHistorial.data.data);
     } catch (error) {
       console.error(error);
+      // 2. Haz visible el error para el celular
+      toast.error("Error de conexión al cargar datos.");
     }
   };
 
   useEffect(() => {
-    cargarDatos();
-  }, []);
+    // Si el AuthContext sigue trabajando, cortamos la ejecución y esperamos.
+    if (cargando) return; 
+
+    // Una vez que termina de cargar, si hay un usuario válido (ej. el admin), traemos los datos.
+    if (usuario) {
+      cargarDatos();
+    }
+  }, [usuario, cargando]);
 
   // --- UTILIDAD TOAST CONFIRMACIÓN ---
   const confirmarAccion = (mensaje, accionConfirmada) => {
@@ -168,6 +176,10 @@ function DashboardPage() {
     });
   };
 
+  if (cargando) {
+    return <div className="min-h-screen flex items-center justify-center">Cargando panel...</div>;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
       <Navbar />
@@ -199,36 +211,48 @@ function DashboardPage() {
         </div>
 
         {/* NUEVO: CALCULADORA DE REPARTO (Solo Admin) */}
-        {usuario?.rol === 'admin' && (
+        {usuario?.rol === "admin" && (
           <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-brand-500 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="bg-brand-100 p-3 rounded-full text-brand-600">
                 <FaUsers className="text-2xl" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-800 text-lg">Calculadora de Reparto</h3>
-                <p className="text-sm text-gray-500">Fondo a dividir: ${granTotalSemana.toFixed(2)}</p>
+                <h3 className="font-bold text-gray-800 text-lg">
+                  Calculadora de Reparto
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Fondo a dividir: ${granTotalSemana.toFixed(2)}
+                </p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-4 w-full md:w-auto">
               <div className="flex-1 md:flex-none">
-                <label className="block text-xs font-medium text-gray-500 mb-1">Dividir entre:</label>
-                <select 
-                  value={cantidadPersonas} 
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Dividir entre:
+                </label>
+                <select
+                  value={cantidadPersonas}
                   onChange={(e) => setCantidadPersonas(Number(e.target.value))}
                   className="w-full border border-gray-300 rounded-lg p-2 focus:border-brand-500 focus:outline-none bg-gray-50 font-medium"
                 >
                   {/* Generamos opciones del 1 al 20 automáticamente */}
-                  {[...Array(10).keys()].map(i => {
+                  {[...Array(10).keys()].map((i) => {
                     const num = i + 1;
-                    return <option key={num} value={num}>{num} {num === 1 ? 'persona' : 'personas'}</option>;
+                    return (
+                      <option key={num} value={num}>
+                        {num} {num === 1 ? "persona" : "personas"}
+                      </option>
+                    );
                   })}
                 </select>
               </div>
-              
+
               <div className="bg-brand-50 border border-brand-200 p-3 rounded-lg min-w-[140px] text-center shadow-inner">
-                <span className="block text-xs uppercase font-bold text-brand-700 mb-1">A cada uno</span>
+                <span className="block text-xs uppercase font-bold text-brand-700 mb-1">
+                  A cada uno
+                </span>
                 <span className="text-2xl font-black text-brand-600">
                   ${(granTotalSemana / cantidadPersonas).toFixed(2)}
                 </span>
