@@ -33,7 +33,7 @@ export const crearPropina = async (datos) => {
 
 // Modificado: Ahora filtra por la semana actual
 export const obtenerHistorial = async () => {
-  return await Propina.find({ liquidada: false })
+  return await Propina.find({ liquidada: { $ne: true } })
     .populate("idMozo", "nombre email")
     .populate("creadoPor", "nombre")
     .sort({ createdAt: -1 });
@@ -41,32 +41,39 @@ export const obtenerHistorial = async () => {
 
 export const calcularTotalesSemanales = async () => {
   return await Propina.aggregate([
-    { $match: { liquidada: false } }, // Filtro clave
+    { $match: { liquidada: { $ne: true } } }, // Filtro clave
     {
       $group: {
         _id: "$idMozo",
         totalMonto: { $sum: "$monto" },
-        cantidad: { $sum: 1 }
-      }
+        cantidad: { $sum: 1 },
+      },
     },
     {
       $lookup: {
-        from: "usuarios", localField: "_id", foreignField: "_id", as: "infoMozo"
-      }
+        from: "usuarios",
+        localField: "_id",
+        foreignField: "_id",
+        as: "infoMozo",
+      },
     },
     {
       $project: {
         nombreMozo: { $arrayElemAt: ["$infoMozo.nombre", 0] },
-        totalMonto: 1, cantidad: 1
-      }
-    }
+        totalMonto: 1,
+        cantidad: 1,
+      },
+    },
   ]);
 };
 
 // NUEVO: Función para resetear la semana
 export const liquidarSemana = async () => {
   // Pasa todas las propinas activas a liquidada: true
-  const resultado = await Propina.updateMany({ liquidada: false }, { liquidada: true });
+  const resultado = await Propina.updateMany(
+    { liquidada: { $ne: true } },
+    { liquidada: true },
+  );
   return resultado;
 };
 

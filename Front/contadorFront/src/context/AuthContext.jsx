@@ -53,12 +53,23 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Verificación de sesión al cargar
-  useEffect(() => {
+useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      setEstaAutenticado(true);
-      // Aquí podrías decodificar el token para sacar el nombre del usuario si quisieras
-      // o hacer una llamada a un endpoint /profile
+      try {
+        // Decodificamos la información oculta en el JWT
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        // Restauramos el usuario en la memoria de React
+        setUsuario({ 
+          id: payload.id, 
+          rol: payload.rol,
+          nombre: payload.nombre || 'Usuario' // Por si el token no traía nombre
+        });
+        setEstaAutenticado(true);
+      } catch (error) {
+        console.error("Token inválido");
+        localStorage.removeItem('token');
+      }
     }
     setCargando(false);
   }, []);
